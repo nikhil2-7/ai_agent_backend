@@ -1,0 +1,4 @@
+GenAi/
+.env
+frontend.py
+__pycache__/
