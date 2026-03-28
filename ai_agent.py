@@ -20,6 +20,11 @@ from langchain_community.tools.tavily_search import TavilySearchResults
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages.ai import AIMessage
 
+# ===============================
+# ✅ IMPORT HISTORY MANAGER
+# ===============================
+from history_manager import load_history
+
 
 # ===============================
 # 🖼 IMAGE GENERATION (HuggingFace)
@@ -98,12 +103,25 @@ def get_response_from_ai_agent(llm_id, query, allow_search, system_prompt, provi
             tools=tools,
         )
 
+        # ✅ ONLY CHANGE — Load history and pass to LLM
+        raw_history = load_history()
+
+        # Convert history format {"human": ..., "ai": ...}
+        # to LLM format {"role": "user/assistant", "content": ...}
+        # History is stored latest first, so reverse it for correct order
+        history_messages = []
+        for conv in reversed(raw_history):
+            history_messages.append({"role": "user", "content": conv["human"]})
+            history_messages.append({"role": "assistant", "content": conv["ai"]})
+
         state = {
-    "messages": [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_input}
-    ]
-}
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                *history_messages,          # ✅ Last 6 conversations added here
+                {"role": "user", "content": user_input}
+            ]
+        }
+        # ✅ END OF CHANGE
 
         response = agent.invoke(state)
 
